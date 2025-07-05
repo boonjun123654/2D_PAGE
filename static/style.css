@@ -45,3 +45,8 @@ body {
     margin: 3px;
     font-weight: bold;
 }
+
+.blank {
+    background-color: #e0e0e0;
+    color: #999;
+}
