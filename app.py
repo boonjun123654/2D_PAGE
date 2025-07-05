@@ -1,7 +1,7 @@
-from flask import Flask
 from config import Config
 from models import db
 from scheduler import start_scheduler
+from flask import Flask, request
 
 def create_app():
     app = Flask(__name__)
