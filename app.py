@@ -1,6 +1,6 @@
 from config import Config
 from models import db
-from scheduler import start_scheduler
+from scheduler import start_scheduler, manual_trigger
 from flask import Flask, request
 
 def create_app():
