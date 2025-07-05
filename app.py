@@ -1,6 +1,6 @@
 from config import Config
 from models import db
-from scheduler import start_scheduler, manual_trigger
+from scheduler import manual_trigger
 from flask import Flask, request, render_template, jsonify
 from models import db, Result2D
 
