@@ -8,7 +8,6 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     db.init_app(app)
-    start_scheduler(app)
 
     @app.route('/')
     def index():
