@@ -17,11 +17,6 @@
       flex: 1 1 280px;
       max-width: 300px;
     }
-
-    .draw-box h2 {
-      font-size: 18px;
-      margin-bottom: 8px;
-    }
   </style>
 </head>
 <body>
@@ -46,18 +41,19 @@ const markets = [
   { code: 'W', name: 'Sarawak', color: '#00540e' }
 ];
 
-// 初始化 9 个市场框
 window.onload = () => {
   const container = document.getElementById('draw-area');
   markets.forEach(market => {
     const box = document.createElement('div');
     box.className = 'draw-box';
-    box.style.backgroundColor = market.color;
     box.id = `draw-box-${market.code}`;
     box.innerHTML = `
-      <h2>${market.name}</h2>
+      <div class="market-header">
+        <div class="market-logo" style="background:${market.color}">${market.code}</div>
+        <div class="market-title">${market.name}</div>
+      </div>
       <div class="result-title">头奖：</div>
-      <div class="result-table" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="result-table">
         <div class="result-box blank" id="odd-even-${market.code}">--</div>
         <div class="result-box blank" id="head-${market.code}">--</div>
         <div class="result-box blank" id="big-small-${market.code}">--</div>
@@ -71,7 +67,6 @@ window.onload = () => {
   });
 };
 
-// 开始开奖逻辑
 function startDraw() {
   markets.forEach(market => {
     fetch('/draw')
