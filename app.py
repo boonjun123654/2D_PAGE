@@ -20,7 +20,7 @@ def create_app():
         if not draw_no:
             return "❌ 请使用 ?draw_no=20250705-09 指定期号", 400
         manual_trigger(draw_no)
-        return f"✅ 已手动执行开奖步骤：{draw_no}"
+        return f"✅ 已手动执行完整开奖流程：{draw_no}"
 
     @app.route('/latest')
     def latest():
