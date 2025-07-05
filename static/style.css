@@ -78,3 +78,28 @@ body {
         padding: 10px;
     }
 }
+
+.result-table {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.result-box {
+    background-color: #ffffff;
+    border: 2px solid #007bff;
+    border-radius: 6px;
+    padding: 12px 0;
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    text-align: center;
+}
+
+.result-title {
+    font-weight: bold;
+    margin-top: 12px;
+    font-size: 16px;
+    text-align: left;
+}
