@@ -4,6 +4,25 @@
     <meta charset="UTF-8">
     <title>2D 开奖系统</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .head, .special {
+            display: inline-block;
+            padding: 6px 12px;
+            margin: 3px;
+            font-weight: bold;
+            border-radius: 4px;
+            background-color: #f1f1f1;
+            min-width: 40px;
+            text-align: center;
+            font-size: 18px;
+            border: 1px solid #ccc;
+        }
+
+        .blank {
+            background-color: #e0e0e0;
+            color: #999;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -22,47 +41,62 @@
                     const drawBox = document.createElement('div');
                     drawBox.className = 'draw-box';
 
+                    // 局号
                     const title = document.createElement('h2');
                     title.textContent = `局号：${data.code}`;
                     drawBox.appendChild(title);
 
+                    // 头奖框（先显示空）
                     const head = document.createElement('p');
-                    head.innerHTML = `<strong>头奖：</strong> <span id="head-number-${data.code}">等待中...</span>`;
+                    head.innerHTML = `<strong>头奖：</strong> <span id="head-number-${data.code}" class="head blank">--</span>`;
                     drawBox.appendChild(head);
 
+                    // 特别奖框（先显示6个空）
                     const special = document.createElement('p');
-                    special.innerHTML = `<strong>特别奖：</strong> <span id="special-numbers-${data.code}"></span>`;
+                    special.innerHTML = `<strong>特别奖：</strong> `;
+                    const specialArea = document.createElement('span');
+                    specialArea.id = `special-numbers-${data.code}`;
+                    for (let i = 0; i < 6; i++) {
+                        const span = document.createElement('span');
+                        span.className = 'special blank';
+                        span.id = `special-${data.code}-${i}`;
+                        span.textContent = '--';
+                        specialArea.appendChild(span);
+                    }
+                    special.appendChild(specialArea);
                     drawBox.appendChild(special);
 
-                    const container = document.getElementById('draw-area');
-                    container.prepend(drawBox);
+                    // 插入页面顶部
+                    document.getElementById('draw-area').prepend(drawBox);
 
-                    // 动态逐个显示特别奖
+                    // 填入特别奖数字（每 5 秒一个）
                     let i = 0;
                     const nums = data.special.slice();
-                    const specialArea = document.getElementById(`special-numbers-${data.code}`);
 
                     const interval = setInterval(() => {
                         if (i < nums.length) {
-                            const span = document.createElement('span');
-                            span.className = 'special';
+                            const span = document.getElementById(`special-${data.code}-${i}`);
                             span.textContent = nums[i];
-                            specialArea.appendChild(span);
+                            span.classList.remove('blank');
                             i++;
                         } else {
                             clearInterval(interval);
-                            // 10 秒后公布头奖
+
+                            // 等 10 秒后公布头奖
                             setTimeout(() => {
                                 const chosen = nums[Math.floor(Math.random() * nums.length)];
-                                document.getElementById(`head-number-${data.code}`).textContent = chosen;
+                                const headSpan = document.getElementById(`head-number-${data.code}`);
+                                headSpan.textContent = chosen;
+                                headSpan.classList.remove('blank');
 
-                                // 从特别奖中移除头奖
-                                const allSpans = specialArea.querySelectorAll('.special');
-                                allSpans.forEach(span => {
-                                    if (span.textContent === chosen) {
-                                        span.remove();
+                                // 从特别奖中移除头奖数字
+                                for (let j = 0; j < 6; j++) {
+                                    const s = document.getElementById(`special-${data.code}-${j}`);
+                                    if (s.textContent === chosen) {
+                                        s.remove();
+                                        break;
                                     }
-                                });
+                                }
                             }, 10000);
                         }
                     }, 5000);
