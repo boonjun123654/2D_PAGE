@@ -13,6 +13,5 @@ def create_app():
 
     return app
 
-if __name__ == '__main__':
-    app = create_app()
-    app.run(debug=True)
+# ✅ 这个是 gunicorn 要找的变量
+app = create_app()
