@@ -11,7 +11,7 @@
   </style>
 </head>
 <body>
-  <h1>2D 最新一期：{{ result.draw_no }}</h1>
+  <h1>2D 最新一期：<span id="draw_no">{{ result.draw_no }}</span></h1>
 
   {% if result.prize_1st %}
     <h2>🎯 头奖：<span class="number">{{ result.prize_1st }}</span></h2>
@@ -21,7 +21,7 @@
 
   <h3>特别奖：</h3>
   {% for i in range(1,7) %}
-    {% set num = getattr(result, 'special_' + i|string) %}
+    {% set num = attribute(result, 'special_' ~ i|string) %}
     {% if num %}
       <div class="number">{{ num }}</div>
     {% else %}
@@ -30,16 +30,17 @@
   {% endfor %}
 
   <br/>
-  <button class="button" onclick="step()">🧪 测试开奖下一步</button>
+  <button class="button" onclick="triggerDraw()">🧪 测试开奖</button>
 
   <script>
-    function step() {
-      fetch('/latest/step', { method: 'POST' })
-        .then(r => r.json())
-        .then(data => {
-          if (data.ok) location.reload()
-          else alert(data.msg || '失败')
-        })
+    function triggerDraw() {
+      const drawNo = document.getElementById("draw_no").innerText;
+      fetch(`/test-draw?draw_no=${drawNo}`)
+        .then(res => res.text())
+        .then(msg => {
+          alert(msg);
+          location.reload();
+        });
     }
   </script>
 </body>
