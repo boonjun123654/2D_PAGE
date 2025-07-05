@@ -1,105 +1,132 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D 开奖系统</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>2D 开奖系统</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="container">
-        <h1>2D 开奖页面</h1>
-        <a href="javascript:void(0)" onclick="startDraw()" class="draw-button">🎯 开奖</a>
+  <div class="container">
+    <h1>2D 开奖页面</h1>
+    <a href="javascript:void(0)" onclick="startDraw()" class="draw-button">🎯 开奖</a>
 
-        <!-- 动态插入开奖区 -->
-        <div id="draw-area"></div>
-    </div>
+    <!-- 动态插入开奖区 -->
+    <div id="draw-area"></div>
+  </div>
 
-    <script>
-        function startDraw() {
-            fetch('/draw')
-                .then(res => res.json())
-                .then(data => {
-                    const drawBox = document.createElement('div');
-                    drawBox.className = 'draw-box';
+  <script>
+    function startDraw() {
+      fetch('/draw')
+        .then(res => res.json())
+        .then(data => {
+          const drawBox = document.createElement('div');
+          drawBox.className = 'draw-box';
 
-                    // 局号
-                    const title = document.createElement('h2');
-                    title.textContent = `局号：${data.code}`;
-                    drawBox.appendChild(title);
+          // 局号
+          const title = document.createElement('h2');
+          title.textContent = `局号：${data.code}`;
+          drawBox.appendChild(title);
 
-                    // 头奖标题
-                    const headTitle = document.createElement('div');
-                    headTitle.className = 'result-title';
-                    headTitle.textContent = '头奖：';
-                    drawBox.appendChild(headTitle);
+          // 头奖标题
+          const headTitle = document.createElement('div');
+          headTitle.className = 'result-title';
+          headTitle.textContent = '头奖：';
+          drawBox.appendChild(headTitle);
 
-                    // 头奖区域（1格）
-                    const headGrid = document.createElement('div');
-                    headGrid.className = 'result-table';
-                    headGrid.style.gridTemplateColumns = '1fr';
+          // 头奖区（3格：单双 / 数字 / 大小）
+          const headGrid = document.createElement('div');
+          headGrid.className = 'result-table';
+          headGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
 
-                    const headBox = document.createElement('div');
-                    headBox.className = 'result-box blank';
-                    headBox.id = `head-number-${data.code}`;
-                    headBox.textContent = '--';
-                    headGrid.appendChild(headBox);
-                    drawBox.appendChild(headGrid);
+          const oddEvenBox = document.createElement('div');
+          oddEvenBox.className = 'result-box blank';
+          oddEvenBox.id = `head-odd-even-${data.code}`;
+          oddEvenBox.textContent = '--';
 
-                    // 特别奖标题
-                    const specialTitle = document.createElement('div');
-                    specialTitle.className = 'result-title';
-                    specialTitle.textContent = '特别奖：';
-                    drawBox.appendChild(specialTitle);
+          const headBox = document.createElement('div');
+          headBox.className = 'result-box blank';
+          headBox.id = `head-number-${data.code}`;
+          headBox.textContent = '--';
 
-                    // 特别奖区域（3列2行）
-                    const specialGrid = document.createElement('div');
-                    specialGrid.className = 'result-table';
-                    specialGrid.id = `special-numbers-${data.code}`;
-                    for (let i = 0; i < 6; i++) {
-                        const box = document.createElement('div');
-                        box.className = 'result-box blank';
-                        box.id = `special-${data.code}-${i}`;
-                        box.textContent = '--';
-                        specialGrid.appendChild(box);
-                    }
-                    drawBox.appendChild(specialGrid);
+          const bigSmallBox = document.createElement('div');
+          bigSmallBox.className = 'result-box blank';
+          bigSmallBox.id = `head-big-small-${data.code}`;
+          bigSmallBox.textContent = '--';
 
-                    // 插入页面顶部
-                    document.getElementById('draw-area').prepend(drawBox);
+          headGrid.appendChild(oddEvenBox);
+          headGrid.appendChild(headBox);
+          headGrid.appendChild(bigSmallBox);
+          drawBox.appendChild(headGrid);
 
-                    // 动态逐个填入特别奖
-                    let i = 0;
-                    const nums = data.special.slice();
+          // 特别奖标题
+          const specialTitle = document.createElement('div');
+          specialTitle.className = 'result-title';
+          specialTitle.textContent = '特别奖：';
+          drawBox.appendChild(specialTitle);
 
-                    const interval = setInterval(() => {
-                        if (i < nums.length) {
-                            const span = document.getElementById(`special-${data.code}-${i}`);
-                            span.textContent = nums[i];
-                            span.classList.remove('blank');
-                            i++;
-                        } else {
-                            clearInterval(interval);
-                            // 10秒后公布头奖
-                            setTimeout(() => {
-                                const chosen = nums[Math.floor(Math.random() * nums.length)];
-                                const headSpan = document.getElementById(`head-number-${data.code}`);
-                                headSpan.textContent = chosen;
-                                headSpan.classList.remove('blank');
+          // 特别奖区域（3列×2行）
+          const specialGrid = document.createElement('div');
+          specialGrid.className = 'result-table';
+          specialGrid.id = `special-numbers-${data.code}`;
+          for (let i = 0; i < 6; i++) {
+            const box = document.createElement('div');
+            box.className = 'result-box blank';
+            box.id = `special-${data.code}-${i}`;
+            box.textContent = '--';
+            specialGrid.appendChild(box);
+          }
+          drawBox.appendChild(specialGrid);
 
-                                for (let j = 0; j < 6; j++) {
-                                    const s = document.getElementById(`special-${data.code}-${j}`);
-                                    if (s.textContent === chosen) {
-                                        s.textContent = '--';
-                                        s.classList.add('blank');
-                                        break;
-                                    }
-                                }
-                            }, 10000);
-                        }
-                    }, 5000);
-                });
-        }
-    </script>
+          // 插入页面顶部
+          document.getElementById('draw-area').prepend(drawBox);
+
+          // 开始逐个开奖特别奖（每 5 秒一个）
+          let i = 0;
+          const nums = data.special.slice();
+
+          const interval = setInterval(() => {
+            if (i < nums.length) {
+              const span = document.getElementById(`special-${data.code}-${i}`);
+              span.textContent = nums[i];
+              span.classList.remove('blank');
+              i++;
+            } else {
+              clearInterval(interval);
+
+              // 等 10 秒后，公布头奖 + 单双 + 大小
+              setTimeout(() => {
+                const chosen = parseInt(nums[Math.floor(Math.random() * nums.length)]);
+                const headSpan = document.getElementById(`head-number-${data.code}`);
+                const oddEvenSpan = document.getElementById(`head-odd-even-${data.code}`);
+                const bigSmallSpan = document.getElementById(`head-big-small-${data.code}`);
+
+                // 显示头奖
+                headSpan.textContent = chosen.toString().padStart(2, '0');
+                headSpan.classList.remove('blank');
+
+                // 判断单双
+                oddEvenSpan.textContent = (chosen % 2 === 0) ? '双' : '单';
+                oddEvenSpan.classList.remove('blank');
+
+                // 判断大小
+                bigSmallSpan.textContent = (chosen >= 50) ? '大' : '小';
+                bigSmallSpan.classList.remove('blank');
+
+                // 从特别奖中移除该号码（变成空）
+                for (let j = 0; j < 6; j++) {
+                  const s = document.getElementById(`special-${data.code}-${j}`);
+                  if (s.textContent === chosen.toString().padStart(2, '0')) {
+                    s.textContent = '--';
+                    s.classList.add('blank');
+                    break;
+                  }
+                }
+              }, 10000);
+            }
+          }, 5000);
+        });
+    }
+  </script>
 </body>
 </html>
