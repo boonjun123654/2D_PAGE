@@ -25,7 +25,7 @@ def create_app():
     @app.route('/latest')
     def latest():
         latest_result = Result2D.query.order_by(Result2D.id.desc()).first()
-        return render_template('latest.html', result=latest_result)
+        return render_template('latest.html', result=latest_result, getattr=getattr)
 
     # ✅ 新增 AJAX API：点击按钮时调用此接口
     @app.route('/latest/step', methods=['POST'])
