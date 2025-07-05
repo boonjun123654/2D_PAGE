@@ -17,7 +17,7 @@ def manual_trigger(draw_no):
         print(f"❌ [{draw_no}] 已存在，跳过生成")
         return
 
-    new_result = Result2DPage(
+    new_result = Result2D(
         draw_date=draw_date,
         draw_no=draw_no,
         special_1=numbers[0],
