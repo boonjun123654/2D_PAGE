@@ -8,19 +8,66 @@
 <body>
     <div class="container">
         <h1>2D 开奖页面</h1>
-        <a href="{{ url_for('draw') }}" class="draw-button">🎯 开奖</a>
+        <a href="javascript:void(0)" onclick="startDraw()" class="draw-button">🎯 开奖</a>
 
-        {% for draw in draws %}
-        <div class="draw-box">
-            <h2>局号：{{ draw.code }}</h2>
-            <p><strong>头奖：</strong> <span class="head">{{ draw.head }}</span></p>
-            <p><strong>特别奖：</strong>
-                {% for num in draw.special %}
-                    <span class="special">{{ num }}</span>
-                {% endfor %}
-            </p>
-        </div>
-        {% endfor %}
+        <!-- 动态插入开奖区 -->
+        <div id="draw-area"></div>
     </div>
+
+    <script>
+        function startDraw() {
+            fetch('/draw')
+                .then(res => res.json())
+                .then(data => {
+                    const drawBox = document.createElement('div');
+                    drawBox.className = 'draw-box';
+
+                    const title = document.createElement('h2');
+                    title.textContent = `局号：${data.code}`;
+                    drawBox.appendChild(title);
+
+                    const head = document.createElement('p');
+                    head.innerHTML = `<strong>头奖：</strong> <span id="head-number-${data.code}">等待中...</span>`;
+                    drawBox.appendChild(head);
+
+                    const special = document.createElement('p');
+                    special.innerHTML = `<strong>特别奖：</strong> <span id="special-numbers-${data.code}"></span>`;
+                    drawBox.appendChild(special);
+
+                    const container = document.getElementById('draw-area');
+                    container.prepend(drawBox);
+
+                    // 动态逐个显示特别奖
+                    let i = 0;
+                    const nums = data.special.slice();
+                    const specialArea = document.getElementById(`special-numbers-${data.code}`);
+
+                    const interval = setInterval(() => {
+                        if (i < nums.length) {
+                            const span = document.createElement('span');
+                            span.className = 'special';
+                            span.textContent = nums[i];
+                            specialArea.appendChild(span);
+                            i++;
+                        } else {
+                            clearInterval(interval);
+                            // 10 秒后公布头奖
+                            setTimeout(() => {
+                                const chosen = nums[Math.floor(Math.random() * nums.length)];
+                                document.getElementById(`head-number-${data.code}`).textContent = chosen;
+
+                                // 从特别奖中移除头奖
+                                const allSpans = specialArea.querySelectorAll('.special');
+                                allSpans.forEach(span => {
+                                    if (span.textContent === chosen) {
+                                        span.remove();
+                                    }
+                                });
+                            }, 10000);
+                        }
+                    }, 5000);
+                });
+        }
+    </script>
 </body>
 </html>
