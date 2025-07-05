@@ -26,7 +26,7 @@ def create_app():
         latest_result = Result2D.query.order_by(Result2D.id.desc()).first()
 
         if not latest_result:
-        return "⚠️ 暂无开奖结果"
+            return "⚠️ 暂无开奖结果"
     
         specials = []
         for i in range(1, 7):
