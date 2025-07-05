@@ -74,9 +74,10 @@ def process_step(draw_no):
         print(f"✅ Step 6: [{draw_no}] 已完成最终开奖，头奖为 {prize_1st}")
         draw_state.pop(draw_no)  # 删除状态
 
-# 手动测试入口（供外部调用）
+# 手动测试入口：一次执行完整开奖流程（step 0 ~ 6）
 def manual_trigger(draw_no):
-    process_step(draw_no)
+    for _ in range(7):
+        process_step(draw_no)
 
 def start_scheduler(app):
     scheduler = BackgroundScheduler(timezone="Asia/Kuala_Lumpur")
