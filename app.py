@@ -1,7 +1,7 @@
 from config import Config
 from models import db
 from scheduler import start_scheduler, manual_trigger
-from flask import Flask, request
+from flask import Flask, request, render_template, jsonify
 
 def create_app():
     app = Flask(__name__)
@@ -20,6 +20,20 @@ def create_app():
             return "❌ 请使用 ?draw_no=20250705-09 指定期号", 400
         manual_trigger(draw_no)
         return f"✅ 已手动执行开奖步骤：{draw_no}"
+
+    @app.route('/latest')
+    def latest():
+        latest_result = Result2D.query.order_by(Result2D.id.desc()).first()
+        return render_template('latest.html', result=latest_result)
+
+    # ✅ 新增 AJAX API：点击按钮时调用此接口
+    @app.route('/latest/step', methods=['POST'])
+    def step_latest():
+        latest_result = Result2D.query.order_by(Result2D.id.desc()).first()
+        if not latest_result:
+            return jsonify({"ok": False, "msg": "未找到最新期"}), 400
+        manual_trigger(latest_result.draw_no)
+        return jsonify({"ok": True})
 
     return app
 
