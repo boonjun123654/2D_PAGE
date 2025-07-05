@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>2D 开奖系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>2D 开奖页面</h1>
+        <a href="{{ url_for('draw') }}" class="draw-button">🎯 开奖</a>
+
+        {% for draw in draws %}
+        <div class="draw-box">
+            <h2>局号：{{ draw.code }}</h2>
+            <p><strong>头奖：</strong> <span class="head">{{ draw.head }}</span></p>
+            <p><strong>特别奖：</strong>
+                {% for num in draw.special %}
+                    <span class="special">{{ num }}</span>
+                {% endfor %}
+            </p>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
