@@ -5,30 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>2D 开奖系统</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <style>
-    .market-area {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 12px;
-    }
-
-    .draw-box {
-      flex: 1 1 280px;
-      max-width: 300px;
-    }
-  </style>
 </head>
 <body>
 <div class="container">
   <h1>2D 开奖页面</h1>
   <a href="javascript:void(0)" onclick="startDraw()" class="draw-button">🎯 开奖</a>
 
-  <!-- 固定显示 9 个市场 -->
   <div class="market-area" id="draw-area"></div>
 </div>
 
 <script>
+const today = new Date();
+const dateStr = today.toLocaleDateString('en-GB', {
+  weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
+}).replace(',', '');
+
 const markets = [
   { code: 'M', name: 'Magnum', color: '#ffff00' },
   { code: 'P', name: 'Damacai', color: '#0000ff' },
@@ -48,18 +39,21 @@ window.onload = () => {
     box.className = 'draw-box';
     box.id = `draw-box-${market.code}`;
     box.innerHTML = `
-      <div class="market-header">
-        <div class="market-logo" style="background:${market.color}">${market.code}</div>
-        <div class="market-title">${market.name}</div>
+      <div class="market-header" style="background-color: ${market.color};">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="logo" class="market-logo">
+        <div class="market-title">
+          <div><strong>${market.name} 2D</strong></div>
+          <div>( ${dateStr} )</div>
+        </div>
       </div>
-      <div class="result-title">头奖：</div>
+      <div class="section-title">1st Prize</div>
       <div class="result-table">
         <div class="result-box blank" id="odd-even-${market.code}">--</div>
         <div class="result-box blank" id="head-${market.code}">--</div>
         <div class="result-box blank" id="big-small-${market.code}">--</div>
       </div>
-      <div class="result-title">特别奖：</div>
-      <div class="result-table" id="special-${market.code}">
+      <div class="section-title">Special Prize</div>
+      <div class="result-table" style="grid-template-columns: repeat(3, 1fr);" id="special-${market.code}">
         ${Array.from({length: 6}).map((_, i) => `<div class="result-box blank" id="special-${market.code}-${i}">--</div>`).join('')}
       </div>
     `;
@@ -105,9 +99,9 @@ function startDraw() {
                   break;
                 }
               }
-            }, 10000);
+            }, 1000);
           }
-        }, 5000);
+        }, 300);
       });
   });
 }
