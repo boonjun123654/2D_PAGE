@@ -21,7 +21,7 @@ scheduler.start()
 
 # ====== 模型 ======
 class DrawResult(db.Model):
-     __tablename__ = 'draw_results'
+    __tablename__ = 'draw_results'
     id = db.Column(db.Integer, primary_key=True)
     draw_no = db.Column(db.String(20), unique=True, nullable=False)  # 20250706-09
     draw_time = db.Column(db.DateTime, nullable=False)
