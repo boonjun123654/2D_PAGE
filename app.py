@@ -84,6 +84,22 @@ def index():
     results = DrawResult.query.filter(DrawResult.draw_no.startswith(today)).order_by(DrawResult.draw_no).all()
     return render_template('index.html', results=results)
 
+def index():
+    ...
+    markets = [
+        {"code": "M", "name": "Magnum", "color": "#ffff00", "logo": "magnum.png"},
+        {"code": "P", "name": "Damacai", "color": "#0000ff", "logo": "damacai.png"},
+        {"code": "T", "name": "SportsToto", "color": "#cc0000", "logo": "toto.png"},
+        {"code": "S", "name": "Singapore", "color": "#4c8ed1", "logo": "singapore.png"},
+        {"code": "H", "name": "Grand Dragon", "color": "#ff0000", "logo": "grand_dragon.png"},
+        {"code": "E", "name": "9 Lotto", "color": "#ffa500", "logo": "9lotto.png"},
+        {"code": "B", "name": "Sabah", "color": "#e51d20", "logo": "sabah.png"},
+        {"code": "K", "name": "Sandakan", "color": "#008835", "logo": "sandakan.png"},
+        {"code": "W", "name": "Sarawak", "color": "#00540e", "logo": "sarawak.png"},
+    ]
+    return render_template('index.html', results=results, markets=markets)
+
+
 # ====== API 结果读取 ======
 @app.route('/draw')
 def draw():
