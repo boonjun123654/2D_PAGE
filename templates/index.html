@@ -34,12 +34,17 @@ const markets = [
 
 window.onload = () => {
   const container = document.getElementById('draw-area');
+
+  const whiteTextMarkets = ['P', 'T', 'S', 'H', 'B', 'K', 'W'];  // 白字市场
+
   markets.forEach(market => {
+    const textColor = whiteTextMarkets.includes(market.code) ? 'white' : 'black';
+
     const box = document.createElement('div');
     box.className = 'draw-box';
     box.id = `draw-box-${market.code}`;
     box.innerHTML = `
-      <div class="market-header" style="background-color: ${market.color};">
+      <div class="market-header" style="background-color: ${market.color}; color: ${textColor};">
         <img src="/static/${market.logo}" alt="${market.name}" class="market-logo">
         <div class="market-title">
           <div><strong>${market.name} 2D</strong></div>
@@ -99,9 +104,9 @@ function startDraw() {
                   break;
                 }
               }
-            }, 10000);
+            }, 10000);  // 头奖逻辑延迟
           }
-        }, 5000);
+        }, 5000);  // 每颗 special 奖号出现间隔
       });
   });
 }
