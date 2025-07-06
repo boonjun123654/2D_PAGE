@@ -2,16 +2,15 @@ from flask import Flask, render_template, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_apscheduler import APScheduler
 from datetime import datetime
-import psycopg2
-from psycopg2.extras import RealDictCursor
 import random
 
 app = Flask(__name__)
 
 # ====== 配置 ======
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///2d_results.db'  # 可换成 PostgreSQL
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://db_4m_user:xiOe63X4iaczwTAcNfUYwS8oWrDExkHX@dpg-d11rb03uibrs73eh87vg-a/db_4m'  # 可换成 PostgreSQL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SCHEDULER_API_ENABLED'] = True
+app.config['SCHEDULER_TIMEZONE'] = 'Asia/Kuala_Lumpur'
 app.secret_key = 'secret123'
 
 # ====== 初始化 ======
