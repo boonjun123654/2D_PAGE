@@ -137,11 +137,11 @@ body {
 }
 
 .section-title {
-    border-bottom: 3px solid black;
-    padding-bottom: 4px;
-    margin-top: 12px;
-    margin-bottom: 6px;
+    background-color: #2f2514;  /* 深棕黑背景（可调） */
+    color: white;               /* 白色字体 */
     font-size: 17px;
     font-weight: bold;
-    text-align: center;
+    padding: 6px 0;
+    margin-top: 10px;
+    border-radius: 3px;
 }
