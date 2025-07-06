@@ -2,6 +2,8 @@ from flask import Flask, render_template, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_apscheduler import APScheduler
 from datetime import datetime
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import random
 
 app = Flask(__name__)
@@ -26,6 +28,25 @@ class DrawResult(db.Model):
     special_numbers = db.Column(db.String(20), nullable=False)  # "10,24,55,46,99,87"
     head_number = db.Column(db.String(2), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+def get_connection():
+    return psycopg2.connect(
+        dbname='你的数据库名',
+        user='你的用户名',
+        password='你的密码',
+        host='你的主机（通常是 localhost 或 render 的连接地址）',
+        port='5432'
+    )
+
+def get_current_draw_no():
+    now = datetime.now()
+    hour = now.hour
+    if hour < 9 or hour > 23:
+        return None  # 非开奖时间
+
+    draw_no = now.strftime('%Y%m%d') + '-' + f"{hour:02d}"
+    return draw_no
+
 
 # ====== 自动开奖函数 ======
 def generate_draw(draw_hour):
