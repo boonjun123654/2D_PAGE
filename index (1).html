@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>2D 开奖系统</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="container">
+  <h1>2D</h1>
+  <a href="javascript:void(0)" onclick="startDraw()" class="draw-button">🎯 开奖</a>
+
+  <div class="market-area" id="draw-area"></div>
+</div>
+
+<script>
+const today = new Date();
+const dateStr = today.toLocaleDateString('en-GB', {
+  weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
+}).replace(',', '');
+
+const markets = [
+  { code: 'M', name: 'Magnum', color: '#ffff00', logo: 'magnum.png' },
+  { code: 'P', name: 'Damacai', color: '#0000ff', logo: 'damacai.png' },
+  { code: 'T', name: 'SportsToto', color: '#cc0000', logo: 'toto.png' },
+  { code: 'S', name: 'Singapore', color: '#4c8ed1', logo: 'singapore.png' },
+  { code: 'H', name: 'Grand Dragon', color: '#ff0000', logo: 'grand_dragon.png' },
+  { code: 'E', name: '9 Lotto', color: '#ffa500', logo: '9lotto.png' },
+  { code: 'B', name: 'Sabah', color: '#e51d20', logo: 'sabah.png' },
+  { code: 'K', name: 'Sandakan', color: '#008835', logo: 'sandakan.png' },
+  { code: 'W', name: 'Sarawak', color: '#00540e', logo: 'sarawak.png' }
+];
+
+window.onload = () => {
+  const container = document.getElementById('draw-area');
+
+  const whiteTextMarkets = ['P', 'T', 'S', 'H', 'B', 'K', 'W'];  // 白字市场
+
+  markets.forEach(market => {
+    const textColor = whiteTextMarkets.includes(market.code) ? 'white' : 'black';
+
+    const box = document.createElement('div');
+    box.className = 'draw-box';
+    box.id = `draw-box-${market.code}`;
+    box.innerHTML = `
+      <div class="market-header" style="background-color: ${market.color}; color: ${textColor};">
+        <img src="/static/${market.logo}" alt="${market.name}" class="market-logo">
+        <div class="market-title">
+          <div><strong>${market.name} 2D</strong></div>
+          <div>( ${dateStr} )</div>
+        </div>
+      </div>
+      <div class="section-title">1st Prize</div>
+      <div class="result-table">
+        <div class="result-box blank" id="odd-even-${market.code}">--</div>
+        <div class="result-box blank" id="head-${market.code}">--</div>
+        <div class="result-box blank" id="big-small-${market.code}">--</div>
+      </div>
+      <div class="section-title">Special Prize</div>
+      <div class="result-table" style="grid-template-columns: repeat(3, 1fr);" id="special-${market.code}">
+        ${Array.from({length: 6}).map((_, i) => `<div class="result-box blank" id="special-${market.code}-${i}">--</div>`).join('')}
+      </div>
+    `;
+    container.appendChild(box);
+  });
+};
+
+function startDraw() {
+  markets.forEach(market => {
+    fetch('/draw')
+      .then(res => res.json())
+      .then(data => {
+        const nums = data.special.slice();
+        let i = 0;
+
+        const interval = setInterval(() => {
+          if (i < nums.length) {
+            const el = document.getElementById(`special-${market.code}-${i}`);
+            el.textContent = nums[i];
+            el.classList.remove('blank');
+            i++;
+          } else {
+            clearInterval(interval);
+            setTimeout(() => {
+              const chosen = parseInt(nums[Math.floor(Math.random() * nums.length)]);
+              const headBox = document.getElementById(`head-${market.code}`);
+              headBox.textContent = chosen.toString().padStart(2, '0');
+              headBox.classList.remove('blank');
+
+              const oddEven = document.getElementById(`odd-even-${market.code}`);
+              oddEven.textContent = chosen % 2 === 0 ? '双' : '单';
+              oddEven.classList.remove('blank');
+
+              const bigSmall = document.getElementById(`big-small-${market.code}`);
+              bigSmall.textContent = chosen >= 50 ? '大' : '小';
+              bigSmall.classList.remove('blank');
+
+              for (let j = 0; j < 6; j++) {
+                const s = document.getElementById(`special-${market.code}-${j}`);
+                if (s.textContent === chosen.toString().padStart(2, '0')) {
+                  s.textContent = '--';
+                  s.classList.add('blank');
+                  break;
+                }
+              }
+            }, 10000);  // 头奖逻辑延迟
+          }
+        }, 5000);  // 每颗 special 奖号出现间隔
+      });
+  });
+}
+</script>
+</body>
+</html>
