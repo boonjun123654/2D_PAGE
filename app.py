@@ -41,17 +41,13 @@ def clear_upcoming_slot_draws():
             db.session.commit()
             print(f"[clear] {code} deleted")
 
-# :40 清空
+# 注册 :40 清空任务
 scheduler.add_job(clear_upcoming_slot_draws, CronTrigger(hour='9-23', minute='40'))
 
-# 仅启动一次调度器
-_scheduler_started = False
-@app.before_first_request
-def _start_scheduler_once():
-    global _scheduler_started
-    if not _scheduler_started:
-        scheduler.start()
-        _scheduler_started = True
+# ⚠️ 直接在导入时启动（请在 Render 设置 WEB_CONCURRENCY=1，确保单 worker）
+if not scheduler.running:
+    scheduler.start()
+    print("[scheduler] started")
 
 # === API: 前端读取接口 /draw?market=M ===
 @app.route('/draw')
@@ -59,10 +55,9 @@ def api_draw():
     market = request.args.get('market', 'M')
     code, _ = _current_slot_code()
 
-    # 直接查表，不用 ORM 模型
     row = db.session.execute(
         text("""
-            SELECT code, market, head, specials, parity_type, size_type
+            SELECT id, code, market, head, specials, parity_type, size_type
             FROM draw_results
             WHERE code = :code AND market = :market
             ORDER BY id DESC
@@ -96,8 +91,4 @@ def index():
     return render_template('index.html')
 
 if __name__ == '__main__':
-    with app.app_context():
-        if not _scheduler_started:
-            scheduler.start()
-            _scheduler_started = True
     app.run(debug=True)
