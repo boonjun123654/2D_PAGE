@@ -33,7 +33,7 @@ const markets = [
 ];
 
 window.onload = () => {$1
-  // 自动在 09:51~23:51 启动一轮开奖
+  // 自动在 09:51~23:51 启动一轮开奖（对接 N_2D）
   scheduleAutoStart();
 }; color: ${textColor};\">
         <img src=\"/static/${market.logo}\" alt=\"${market.name}\" class=\"market-logo\">
@@ -73,7 +73,7 @@ function startDraw() {
             i++;
           } else {
             clearInterval(interval);
-            {
+            setTimeout(() => {
               const chosen = (headFromServer !== null) ? headFromServer : parseInt(nums[Math.floor(Math.random() * nums.length)]);
               const headBox = document.getElementById(`head-${market.code}`);
               headBox.textContent = chosen.toString().padStart(2, '0');
@@ -95,18 +95,18 @@ function startDraw() {
                   break;
                 }
               }
-            } // 显示完 3 个 special 后，立即显示头奖/单双/大小
+            }, 10000);  // 头奖逻辑延迟
           }
-        }, 10000);  // 每颗 special 奖号出现间隔（改为10秒）
+        }, 10000);  // 每颗 special 奖号出现间隔（10秒）
       });
   });
 }
 
-// 自动在 09:51~23:51 启动
+// 09:51 自动开；9~23 点之外不自动
 function scheduleAutoStart(){
   const now = new Date();
   const h = now.getHours();
-  if (h < 9 || h > 23) return; // 只在 9~23 点内
+  if (h < 9 || h > 23) return; // 只在 09~23 点内
   if (now.getMinutes() >= 51) {
     startDraw();
   } else {
