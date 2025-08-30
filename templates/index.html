@@ -69,6 +69,11 @@ window.onload = () => {
 
 // 09:51 自动开；9~23 点之外不自动
 function scheduleAutoStart(){
+  const params = new URLSearchParams(location.search);
+  if (params.get('demo') === '1') {  // 调试：/?demo=1
+    startDraw();
+    return;
+  }
   const now = new Date();
   const h = now.getHours();
   if (h < 9 || h > 23) return; // 只在 09~23 点内
@@ -152,3 +157,4 @@ function startDraw() {
 </script>
 </body>
 </html>
+
