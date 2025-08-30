@@ -63,12 +63,9 @@ window.onload = () => {
     container.appendChild(box);
   });
 
-  // 自动在 09:51~23:51 启动一轮开奖（使用浏览器本地时间）
-  scheduleAutoStart();
-  // (#3) 每小时 :51 自动再跑一轮
-  scheduleNext51();
-  // (#2 扩展) 每小时 :40 清空 UI（与后端清库时间对应）
-  scheduleClearAt40();
+  scheduleAutoStart();   // 当小时 :51 如果已过，按已过秒数恢复；否则等到 :51
+  scheduleNext51();      // 每小时 :51 再来一轮
+  scheduleClearAt40();   // 每小时 :40 清空 UI（等待下一轮）
 };
 
 // —— 工具：清空整页所有格子（用于 :40）
@@ -85,104 +82,132 @@ function clearAllUI() {
   });
 }
 
-// —— :40 调度：清空 UI，并循环到下一次 :40
+// —— :40 调度：清空 UI，并循环到下一次 :40（仅 09–23 点）
 function scheduleClearAt40() {
+  const loop = () => {
+    const now = new Date();
+    const target = new Date(now);
+    target.setMinutes(40, 0, 0);
+    if (now >= target) target.setHours(target.getHours() + 1); // 下一小时 :40
+    const ms = target - now;
+    setTimeout(() => {
+      const hr = new Date().getHours();
+      if (hr >= 9 && hr <= 23) clearAllUI();
+      loop();
+    }, ms);
+  };
+  loop();
+}
+
+// —— 计算本小时 :51 已经过了多少秒（<0 代表还没到）
+function elapsedSince51() {
   const now = new Date();
-  const target = new Date(now);
-  target.setMinutes(40, 0, 0);
-  if (now >= target) target.setHours(target.getHours() + 1); // 下一小时的 :40
-  const ms = target - now;
-  setTimeout(() => { clearAllUI(); scheduleClearAt40(); }, ms);
+  const start = new Date(now);
+  start.setMinutes(51, 0, 0);
+  return (now - start) / 1000; // 秒
 }
 
 // —— 初次调度：09~23 点内，在当小时的 :51 自动开始（支持 ?demo=1 立即演示）
 function scheduleAutoStart(){
   const params = new URLSearchParams(location.search);
-  if (params.get('demo') === '1') {  // 调试：/?demo=1
-    startDraw();
+  if (params.get('demo') === '1') {
+    startDraw(true); // demo 下立即显示第1个
     return;
   }
   const now = new Date();
   const h = now.getHours();
   if (h < 9 || h > 23) return; // 只在 09~23 点内
-  if (now.getMinutes() >= 51) {
-    startDraw();
+
+  const e = elapsedSince51();
+  if (e >= 0) {
+    // 已到 :51：根据已过秒数恢复应有显示
+    startDraw(true, e);
   } else {
+    // 未到 :51，等到 :51 再开始
     const target = new Date(now);
     target.setMinutes(51, 0, 0);
     const ms = target - now;
-    if (ms > 0) setTimeout(startDraw, ms);
+    if (ms > 0) setTimeout(() => startDraw(true, 0), ms);
   }
 }
 
-// (#3) —— 循环调度：到下一次 :51 再自动开始一轮
+// —— 循环调度：到下一次 :51 再自动开始一轮
 function scheduleNext51() {
-  const now = new Date();
-  const target = new Date(now);
-  // 如果已过 :51，则调到下一小时的 :51；否则当前小时的 :51
-  target.setHours(now.getMinutes() >= 51 ? now.getHours() + 1 : now.getHours(), 51, 0, 0);
-  const ms = target - now;
-  setTimeout(() => { startDraw(); scheduleNext51(); }, ms);
+  const loop = () => {
+    const now = new Date();
+    const target = new Date(now);
+    // 若已过 :51，则指向下一小时 :51；否则当前小时 :51
+    target.setHours(now.getMinutes() >= 51 ? now.getHours() + 1 : now.getHours(), 51, 0, 0);
+    const ms = target - now;
+    setTimeout(() => {
+      const hr = new Date().getHours();
+      if (hr >= 9 && hr <= 23) startDraw(true, 0);
+      loop();
+    }, ms);
+  };
+  loop();
 }
 
-function startDraw() {
+// —— 核心：开始一轮（t=0 显示第1个；t=10 第2个；t=20 第3个；t=30 头奖）
+function startDraw(showImmediateFirst = true, elapsedSec = 0) {
   markets.forEach(market => {
     fetch(`/draw?market=${market.code}`)
       .then(res => res.json())
       .then(data => {
         const headFromServer = (data.head != null && data.head !== '') ? parseInt(data.head, 10) : null;
         const nums = ((data.special || data.specials || [])).slice(0, 3).map(n => n.toString().padStart(2, '0'));
-        let i = 0;
 
-        const interval = setInterval(() => {
-          if (i < nums.length) {
-            const el = document.getElementById(`special-${market.code}-${i}`);
-            el.textContent = nums[i];
-            el.classList.remove('blank');
-            i++;
+        // 重置格子
+        for (let j = 0; j < 3; j++) {
+          const s = document.getElementById(`special-${market.code}-${j}`);
+          s.textContent = '--'; s.classList.add('blank');
+        }
+        const headBox = document.getElementById(`head-${market.code}`);
+        const oddEven = document.getElementById(`odd-even-${market.code}`);
+        const bigSmall = document.getElementById(`big-small-${market.code}`);
+        headBox.textContent = '--'; oddEven.textContent = '--'; bigSmall.textContent = '--';
+        headBox.classList.add('blank'); oddEven.classList.add('blank'); bigSmall.classList.add('blank');
+
+        // 以 :51 为 t=0：t=0 显示#1；t=10 #2；t=20 #3；t=30 头奖
+        const e = Math.max(0, elapsedSec || 0);
+        let shown = 0;
+        if (nums.length > 0) {
+          if (e >= 0)  shown = 1;    // 0–9.999s：#1
+          if (e >= 10) shown = 2;    // 10–19.999s：#1,#2
+          if (e >= 20) shown = 3;    // 20–29.999s：#1,#2,#3
+        }
+
+        // 先渲染“应当已出现”的 special
+        for (let k = 0; k < shown; k++) {
+          const el = document.getElementById(`special-${market.code}-${k}`);
+          el.textContent = nums[k];
+          el.classList.remove('blank');
+        }
+
+        // >=30 秒：直接显示头奖/单双/大小，之后一直维持直到 :40 清空
+        if (e >= 30) {
+          renderHeadAndTypes(market.code, headFromServer, nums, data);
+          return;
+        }
+
+        // 继续调度剩余的 special 与 head（基于 e 计算剩余等待）
+        const scheduleAt = (targetSec, fn) => {
+          const delay = Math.max(0, targetSec - e) * 1000;
+          setTimeout(fn, delay);
+        };
+
+        // 若还没显示第1个（理论上 e<0 才会），但保持健壮性：
+        if (shown === 0 && nums.length > 0) {
+          if (showImmediateFirst) {
+            showSpecial(market.code, 0, nums[0]); shown = 1;
           } else {
-            clearInterval(interval);
-            // 3 颗 special 出完后，再等 10 秒显示头奖/单双/大小
-            setTimeout(() => {
-              const chosen = (headFromServer !== null) ? headFromServer
-                : (nums.length ? parseInt(nums[Math.floor(Math.random() * nums.length)], 10) : NaN);
-
-              const headBox = document.getElementById(`head-${market.code}`);
-              const oddEven = document.getElementById(`odd-even-${market.code}`);
-              const bigSmall = document.getElementById(`big-small-${market.code}`);
-
-              if (!Number.isNaN(chosen)) {
-                headBox.textContent = chosen.toString().padStart(2, '0');
-                headBox.classList.remove('blank');
-
-                // 单/双：后端带 parity 则用后端，否则按 head 计算
-                oddEven.textContent = (data.parity && (data.parity === '单' || data.parity === '双'))
-                  ? data.parity
-                  : (chosen % 2 === 0 ? '双' : '单');
-                oddEven.classList.remove('blank');
-
-                // 大/小：后端带 size 则用后端，否则按 head 计算
-                bigSmall.textContent = (data.size && (data.size === '大' || data.size === '小'))
-                  ? data.size
-                  : (chosen >= 50 ? '大' : '小');
-                bigSmall.classList.remove('blank');
-
-                // 若头奖号码与某个 special 相同，则清空该格，保持唯一
-                for (let j = 0; j < nums.length; j++) {
-                  const s = document.getElementById(`special-${market.code}-${j}`);
-                  if (s.textContent === chosen.toString().padStart(2, '0')) {
-                    s.textContent = '--';
-                    s.classList.add('blank');
-                    break;
-                  }
-                }
-              } else {
-                headBox.textContent = 'ERR';
-                headBox.classList.remove('blank');
-              }
-            }, 10000); // 头奖逻辑延迟 10 秒
+            scheduleAt(0, () => showSpecial(market.code, 0, nums[0])); shown = 1;
           }
-        }, 10000);  // 每颗 special 奖号出现间隔 10 秒
+        }
+
+        if (nums.length > 1 && shown <= 1) scheduleAt(10, () => showSpecial(market.code, 1, nums[1]));
+        if (nums.length > 2 && shown <= 2) scheduleAt(20, () => showSpecial(market.code, 2, nums[2]));
+        scheduleAt(30, () => renderHeadAndTypes(market.code, headFromServer, nums, data));
       })
       .catch(() => {
         // 简单失败提示
@@ -191,6 +216,50 @@ function startDraw() {
         headBox.classList.remove('blank');
       });
   });
+}
+
+function showSpecial(code, idx, val) {
+  const el = document.getElementById(`special-${code}-${idx}`);
+  if (!el) return;
+  el.textContent = val;
+  el.classList.remove('blank');
+}
+
+function renderHeadAndTypes(code, headFromServer, nums, data) {
+  const headBox = document.getElementById(`head-${code}`);
+  const oddEven = document.getElementById(`odd-even-${code}`);
+  const bigSmall = document.getElementById(`big-small-${code}`);
+  const chosen = (headFromServer !== null)
+    ? headFromServer
+    : (nums.length ? parseInt(nums[Math.floor(Math.random() * nums.length)], 10) : NaN);
+
+  if (!Number.isNaN(chosen)) {
+    headBox.textContent = chosen.toString().padStart(2, '0');
+    headBox.classList.remove('blank');
+
+    oddEven.textContent = (data.parity && (data.parity === '单' || data.parity === '双'))
+      ? data.parity
+      : (chosen % 2 === 0 ? '双' : '单');
+    oddEven.classList.remove('blank');
+
+    bigSmall.textContent = (data.size && (data.size === '大' || data.size === '小'))
+      ? data.size
+      : (chosen >= 50 ? '大' : '小');
+    bigSmall.classList.remove('blank');
+
+    // 若头奖与某个 special 相同，则清空该格，保持唯一
+    for (let j = 0; j < 3; j++) {
+      const s = document.getElementById(`special-${code}-${j}`);
+      if (s && s.textContent === chosen.toString().padStart(2, '0')) {
+        s.textContent = '--';
+        s.classList.add('blank');
+        break;
+      }
+    }
+  } else {
+    headBox.textContent = 'ERR';
+    headBox.classList.remove('blank');
+  }
 }
 </script>
 </body>
