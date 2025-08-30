@@ -154,7 +154,30 @@ function startDraw() {
       });
   });
 }
+function clearAllUI() {
+  markets.forEach(m => {
+    const ids = [
+      `odd-even-${m.code}`, `head-${m.code}`, `big-small-${m.code}`,
+      `special-${m.code}-0`, `special-${m.code}-1`, `special-${m.code}-2`
+    ];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = '--'; el.classList.add('blank'); }
+    });
+  });
+}
+
+// 调度每小时 :40 清空
+function scheduleClearAt40() {
+  const now = new Date();
+  const target = new Date(now);
+  target.setMinutes(40, 0, 0);
+  if (now > target) target.setHours(target.getHours() + 1); // 下一小时的 :40
+  const ms = target - now;
+  setTimeout(() => { clearAllUI(); scheduleClearAt40(); }, ms);
+}
 </script>
 </body>
 </html>
+
 
