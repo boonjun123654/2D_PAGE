@@ -49,40 +49,70 @@ if not scheduler.running:
     scheduler.start()
     print("[scheduler] started")
 
-# === API: 前端读取接口 /draw?market=M ===
 @app.route('/draw')
 def api_draw():
-    market = request.args.get('market', 'M')
-    code, _ = _current_slot_code()
+    market = request.args.get('market', 'M').strip().upper()
+    force_code = request.args.get('code')           # 可选：指定 code=YYYYMMDD/HHMM
+    strict = request.args.get('strict', '0') == '1' # strict=1 则不回退
+    want_debug = request.args.get('debug', '0') == '1'
 
+    code_auto, _ = _current_slot_code()             # 例如 20250830/1750
+    code = force_code.strip() if force_code else code_auto
+
+    sql = """
+        SELECT id, code, market, head, specials,
+               COALESCE(parity_type, odd_even) AS _parity,
+               COALESCE(size_type,   big_small) AS _size
+        FROM draw_results
+        WHERE market = :market {clause}
+        ORDER BY id DESC
+        LIMIT 1
+    """
+
+    # 先按精确 code 查
     row = db.session.execute(
-        text("""
-            SELECT id, code, market, head, specials, parity_type, size_type
-            FROM draw_results
-            WHERE code = :code AND market = :market
-            ORDER BY id DESC
-            LIMIT 1
-        """),
-        {"code": code, "market": market}
+        text(sql.format(clause="AND code = :code")),
+        {"market": market, "code": code}
     ).mappings().first()
 
+    # 查不到且允许回退：当天最新一条
+    if (row is None) and (not strict):
+        today_prefix = datetime.now(MY_TZ).strftime("%Y%m%d") + "/"
+        row = db.session.execute(
+            text(sql.format(clause="AND code LIKE :prefix")),
+            {"market": market, "prefix": f"{today_prefix}%"}
+        ).mappings().first()
+
     if not row:
-        return jsonify({"code": code, "market": market, "head": None, "special": []})
+        payload = {"code": code, "market": market, "head": None, "special": []}
+        if want_debug:
+            payload["_debug"] = {
+                "computed_code": code_auto, "force_code": force_code,
+                "strict": strict, "reason": "not_found_for_code_and_today_fallback"
+            }
+        return jsonify(payload)
 
     specials = []
     if row.get("specials"):
         specials = [s.strip().zfill(2) for s in row["specials"].split(",") if s.strip()][:3]
 
+    head = row.get("head")
+    head = head.zfill(2) if head else None
+
     resp = {
         "code": row["code"],
         "market": row["market"],
-        "head": (row["head"].zfill(2) if row.get("head") else None),
+        "head": head,
         "special": specials,
     }
-    if row.get("parity_type"):
-        resp["parity"] = row["parity_type"]
-    if row.get("size_type"):
-        resp["size"] = row["size_type"]
+    if row.get("_parity") in ("单","双"): resp["parity"] = row["_parity"]
+    if row.get("_size")   in ("大","小"): resp["size"]   = row["_size"]
+
+    if want_debug:
+        resp["_debug"] = {
+            "computed_code": code_auto, "force_code": force_code,
+            "strict": strict, "used_row_id": row["id"]
+        }
     return jsonify(resp)
 
 # === Page ===
