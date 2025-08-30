@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>2D 开奖系统</title>
+  <title>2D 开奖系统（Snapshot）</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -32,34 +32,25 @@ const markets = [
   { code: 'W', name: 'Sarawak', color: '#00540e', logo: 'sarawak.png' }
 ];
 
-window.onload = () => {
-  const container = document.getElementById('draw-area');
-
-  const whiteTextMarkets = ['P', 'T', 'S', 'H', 'B', 'K', 'W'];  // 白字市场
-
-  markets.forEach(market => {
-    const textColor = whiteTextMarkets.includes(market.code) ? 'white' : 'black';
-
-    const box = document.createElement('div');
-    box.className = 'draw-box';
-    box.id = `draw-box-${market.code}`;
-    box.innerHTML = `
-      <div class="market-header" style="background-color: ${market.color}; color: ${textColor};">
-        <img src="/static/${market.logo}" alt="${market.name}" class="market-logo">
-        <div class="market-title">
+window.onload = () => {$1
+  // 自动在 09:51~23:51 启动一轮开奖
+  scheduleAutoStart();
+}; color: ${textColor};\">
+        <img src=\"/static/${market.logo}\" alt=\"${market.name}\" class=\"market-logo\">
+        <div class=\"market-title\">
           <div><strong>${market.name} 2D</strong></div>
           <div>( ${dateStr} )</div>
         </div>
       </div>
-      <div class="section-title">1st Prize</div>
-      <div class="result-table">
-        <div class="result-box blank" id="odd-even-${market.code}">--</div>
-        <div class="result-box blank" id="head-${market.code}">--</div>
-        <div class="result-box blank" id="big-small-${market.code}">--</div>
+      <div class=\"section-title\">1st Prize</div>
+      <div class=\"result-table\">
+        <div class=\"result-box blank\" id=\"odd-even-${market.code}\">--</div>
+        <div class=\"result-box blank\" id=\"head-${market.code}\">--</div>
+        <div class=\"result-box blank\" id=\"big-small-${market.code}\">--</div>
       </div>
-      <div class="section-title">Special Prize</div>
-      <div class="result-table" style="grid-template-columns: repeat(3, 1fr);" id="special-${market.code}">
-        ${Array.from({length: 6}).map((_, i) => `<div class="result-box blank" id="special-${market.code}-${i}">--</div>`).join('')}
+      <div class=\"section-title\">Special Prize</div>
+      <div class=\"result-table\" style=\"grid-template-columns: repeat(3, 1fr);\" id=\"special-${market.code}\">
+        ${Array.from({length: 3}).map((_, i) => `<div class=\"result-box blank\" id=\"special-${market.code}-${i}\">--</div>`).join('')}
       </div>
     `;
     container.appendChild(box);
@@ -68,10 +59,10 @@ window.onload = () => {
 
 function startDraw() {
   markets.forEach(market => {
-    fetch('/draw')
+    fetch(`/draw?market=${market.code}`)
       .then(res => res.json())
-      .then(data => {
-        const nums = data.special.slice();
+      .then(data => { const headFromServer = data.head ? parseInt(data.head, 10) : null;
+        const nums = ((data.special || data.specials || [])).slice(0, 3).map(n => n.toString().padStart(2, '0'));
         let i = 0;
 
         const interval = setInterval(() => {
@@ -82,8 +73,8 @@ function startDraw() {
             i++;
           } else {
             clearInterval(interval);
-            setTimeout(() => {
-              const chosen = parseInt(nums[Math.floor(Math.random() * nums.length)]);
+            {
+              const chosen = (headFromServer !== null) ? headFromServer : parseInt(nums[Math.floor(Math.random() * nums.length)]);
               const headBox = document.getElementById(`head-${market.code}`);
               headBox.textContent = chosen.toString().padStart(2, '0');
               headBox.classList.remove('blank');
@@ -96,7 +87,7 @@ function startDraw() {
               bigSmall.textContent = chosen >= 50 ? '大' : '小';
               bigSmall.classList.remove('blank');
 
-              for (let j = 0; j < 6; j++) {
+              for (let j = 0; j < nums.length; j++) {
                 const s = document.getElementById(`special-${market.code}-${j}`);
                 if (s.textContent === chosen.toString().padStart(2, '0')) {
                   s.textContent = '--';
@@ -104,11 +95,26 @@ function startDraw() {
                   break;
                 }
               }
-            }, 10000);  // 头奖逻辑延迟
+            } // 显示完 3 个 special 后，立即显示头奖/单双/大小
           }
-        }, 5000);  // 每颗 special 奖号出现间隔
+        }, 10000);  // 每颗 special 奖号出现间隔（改为10秒）
       });
   });
+}
+
+// 自动在 09:51~23:51 启动
+function scheduleAutoStart(){
+  const now = new Date();
+  const h = now.getHours();
+  if (h < 9 || h > 23) return; // 只在 9~23 点内
+  if (now.getMinutes() >= 51) {
+    startDraw();
+  } else {
+    const target = new Date(now);
+    target.setMinutes(51, 0, 0);
+    const ms = target - now;
+    if (ms > 0) setTimeout(startDraw, ms);
+  }
 }
 </script>
 </body>
