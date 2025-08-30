@@ -56,33 +56,32 @@ def api_draw():
     strict = request.args.get('strict', '0') == '1' # strict=1 则不回退
     want_debug = request.args.get('debug', '0') == '1'
 
-    code_auto, _ = _current_slot_code()             # 例如 20250830/1750
+    code_auto, _ = _current_slot_code()             # 例如 20250830/2050
     code = force_code.strip() if force_code else code_auto
 
-    sql = """
-        SELECT id, code, market, head, specials,
-               COALESCE(parity_type, odd_even) AS _parity,
-               COALESCE(size_type,   big_small) AS _size
+    base_sql = """
+        SELECT id, code, market, head, specials, parity_type, size_type
         FROM draw_results
         WHERE market = :market {clause}
         ORDER BY id DESC
         LIMIT 1
     """
 
-    # 先按精确 code 查
+    # 1) 先按精确 code 查
     row = db.session.execute(
-        text(sql.format(clause="AND code = :code")),
+        text(base_sql.format(clause="AND code = :code")),
         {"market": market, "code": code}
     ).mappings().first()
 
-    # 查不到且允许回退：当天最新一条
+    # 2) 查不到且允许回退：当天该市场最新一条
     if (row is None) and (not strict):
         today_prefix = datetime.now(MY_TZ).strftime("%Y%m%d") + "/"
         row = db.session.execute(
-            text(sql.format(clause="AND code LIKE :prefix")),
+            text(base_sql.format(clause="AND code LIKE :prefix")),
             {"market": market, "prefix": f"{today_prefix}%"}
         ).mappings().first()
 
+    # 3) 仍未找到
     if not row:
         payload = {"code": code, "market": market, "head": None, "special": []}
         if want_debug:
@@ -92,10 +91,9 @@ def api_draw():
             }
         return jsonify(payload)
 
-    specials = []
-    if row.get("specials"):
-        specials = [s.strip().zfill(2) for s in row["specials"].split(",") if s.strip()][:3]
-
+    # 4) 解析字段
+    specials_raw = row.get("specials") or ""
+    specials = [s.strip().zfill(2) for s in specials_raw.split(",") if s.strip()][:3]
     head = row.get("head")
     head = head.zfill(2) if head else None
 
@@ -105,8 +103,9 @@ def api_draw():
         "head": head,
         "special": specials,
     }
-    if row.get("_parity") in ("单","双"): resp["parity"] = row["_parity"]
-    if row.get("_size")   in ("大","小"): resp["size"]   = row["_size"]
+    # 单/双、大/小 直接使用现有列（若为空，前端会按 head 计算）
+    if row.get("parity_type") in ("单", "双"): resp["parity"] = row["parity_type"]
+    if row.get("size_type")   in ("大", "小"): resp["size"]   = row["size_type"]
 
     if want_debug:
         resp["_debug"] = {
