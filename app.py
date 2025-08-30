@@ -2,7 +2,7 @@ import os
 from flask import Flask, render_template, request, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
-from datetime import datetime
+from datetime import datetime,timedelta
 from pytz import timezone
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -22,12 +22,15 @@ db.init_app(app)
 scheduler = BackgroundScheduler(timezone=str(MY_TZ))
 
 def _current_slot_code(now=None):
-    """返回最近一次 :50 的期号 例如 20250830/0950，并返回对应 datetime"""
     now = now or datetime.now(MY_TZ)
     hour, minute = now.hour, now.minute
     if minute < 50:
         hour -= 1
-    base = now.replace(hour=hour, minute=50, second=0, microsecond=0)
+    base = now.replace(second=0, microsecond=0)
+    if hour < 0:
+        base = (base - timedelta(days=1)).replace(hour=23, minute=50)
+    else:
+        base = base.replace(hour=hour, minute=50)
     return base.strftime("%Y%m%d/%H%M"), base
 
 def clear_upcoming_slot_draws():
