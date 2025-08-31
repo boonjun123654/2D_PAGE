@@ -82,45 +82,37 @@ function clearAllUI() {
   });
 }
 
-// —— :40 调度：清空 UI，并循环到下一次 :40（仅 09–23 点）
+// :40 清空 UI（与后端清库同步）
 function scheduleClearAt40() {
   const loop = () => {
     const now = new Date();
     const target = new Date(now);
     target.setMinutes(40, 0, 0);
-    if (now >= target) target.setHours(target.getHours() + 1); // 下一小时 :40
+    if (now >= target) target.setHours(target.getHours() + 1);
     const ms = target - now;
-    setTimeout(() => {
-      const hr = new Date().getHours();
-      if (hr >= 9 && hr <= 23) clearAllUI();
-      loop();
-    }, ms);
+    setTimeout(() => { const hr = new Date().getHours(); if (hr >= 9 && hr <= 23) clearAllUI(); loop(); }, ms);
   };
   loop();
 }
 
-// —— 计算本小时 :51 已经过了多少秒（<0 代表还没到）
+// 计算本小时 :51 已经过了多少秒（<0 代表还没到）
 function elapsedSince51() {
   const now = new Date();
   const start = new Date(now);
   start.setMinutes(51, 0, 0);
   return (now - start) / 1000; // 秒
 }
-
-// —— 初次调度：09~23 点内，在当小时的 :51 自动开始（支持 ?demo=1 立即演示）
+// 初次调度：09~23 点内，在当小时的 :51 自动开始（支持 ?demo=1 立即演示）
 function scheduleAutoStart(){
   const params = new URLSearchParams(location.search);
-  if (params.get('demo') === '1') {
-    startDraw(true); // demo 下立即显示第1个
-    return;
-  }
+  if (params.get('demo') === '1') { startDraw(true, 0); return; }
   const now = new Date();
   const h = now.getHours();
   if (h < 9 || h > 23) return; // 只在 09~23 点内
 
   const e = elapsedSince51();
   if (e >= 0) {
-    // 已到 :51：根据已过秒数恢复应有显示
+    // 已过 :51：按已过秒数恢复（不会“消失”）
     startDraw(true, e);
   } else {
     // 未到 :51，等到 :51 再开始
@@ -130,25 +122,18 @@ function scheduleAutoStart(){
     if (ms > 0) setTimeout(() => startDraw(true, 0), ms);
   }
 }
-
-// —— 循环调度：到下一次 :51 再自动开始一轮
+// 每小时 :51 自动再来一轮
 function scheduleNext51() {
   const loop = () => {
     const now = new Date();
     const target = new Date(now);
-    // 若已过 :51，则指向下一小时 :51；否则当前小时 :51
     target.setHours(now.getMinutes() >= 51 ? now.getHours() + 1 : now.getHours(), 51, 0, 0);
     const ms = target - now;
-    setTimeout(() => {
-      const hr = new Date().getHours();
-      if (hr >= 9 && hr <= 23) startDraw(true, 0);
-      loop();
-    }, ms);
+    setTimeout(() => { const hr = new Date().getHours(); if (hr >= 9 && hr <= 23) startDraw(true, 0); loop(); }, ms);
   };
   loop();
 }
-
-// —— 核心：开始一轮（t=0 显示第1个；t=10 第2个；t=20 第3个；t=30 头奖）
+// 开始一轮（t=0 显示#1；t=10 #2；t=20 #3；t=30 头奖），支持刷新恢复
 function startDraw(showImmediateFirst = true, elapsedSec = 0) {
   markets.forEach(market => {
     fetch(`/draw?market=${market.code}`)
@@ -168,52 +153,31 @@ function startDraw(showImmediateFirst = true, elapsedSec = 0) {
         headBox.textContent = '--'; oddEven.textContent = '--'; bigSmall.textContent = '--';
         headBox.classList.add('blank'); oddEven.classList.add('blank'); bigSmall.classList.add('blank');
 
-        // 以 :51 为 t=0：t=0 显示#1；t=10 #2；t=20 #3；t=30 头奖
-        const e = Math.max(0, elapsedSec || 0);
+        const e = Math.max(0, elapsedSec || 0); // 距 :51 的秒数（取 >=0）
         let shown = 0;
         if (nums.length > 0) {
-          if (e >= 0)  shown = 1;    // 0–9.999s：#1
-          if (e >= 10) shown = 2;    // 10–19.999s：#1,#2
-          if (e >= 20) shown = 3;    // 20–29.999s：#1,#2,#3
+          if (e >= 0)  shown = 1;   // t∈[0,10)
+          if (e >= 10) shown = 2;   // t∈[10,20)
+          if (e >= 20) shown = 3;   // t∈[20,30)
         }
-
-        // 先渲染“应当已出现”的 special
+        // 先渲染已到时间的 special
         for (let k = 0; k < shown; k++) {
           const el = document.getElementById(`special-${market.code}-${k}`);
-          el.textContent = nums[k];
-          el.classList.remove('blank');
+          el.textContent = nums[k]; el.classList.remove('blank');
         }
+        // 若已 >=30 秒，直接显示头奖/单双/大小并维持到 :40
+        if (e >= 30) { renderHeadAndTypes(market.code, headFromServer, nums, data); return; }
 
-        // >=30 秒：直接显示头奖/单双/大小，之后一直维持直到 :40 清空
-        if (e >= 30) {
-          renderHeadAndTypes(market.code, headFromServer, nums, data);
-          return;
-        }
-
-        // 继续调度剩余的 special 与 head（基于 e 计算剩余等待）
-        const scheduleAt = (targetSec, fn) => {
-          const delay = Math.max(0, targetSec - e) * 1000;
-          setTimeout(fn, delay);
-        };
-
-        // 若还没显示第1个（理论上 e<0 才会），但保持健壮性：
-        if (shown === 0 && nums.length > 0) {
-          if (showImmediateFirst) {
-            showSpecial(market.code, 0, nums[0]); shown = 1;
-          } else {
-            scheduleAt(0, () => showSpecial(market.code, 0, nums[0])); shown = 1;
-          }
-        }
-
+        // 否则按目标秒数继续调度剩余显示
+        const scheduleAt = (targetSec, fn) => { setTimeout(fn, Math.max(0, targetSec - e) * 1000); };
+        if (shown === 0 && nums.length > 0) { showImmediateFirst ? showSpecial(market.code, 0, nums[0]) : scheduleAt(0, () => showSpecial(market.code, 0, nums[0])); }
         if (nums.length > 1 && shown <= 1) scheduleAt(10, () => showSpecial(market.code, 1, nums[1]));
         if (nums.length > 2 && shown <= 2) scheduleAt(20, () => showSpecial(market.code, 2, nums[2]));
         scheduleAt(30, () => renderHeadAndTypes(market.code, headFromServer, nums, data));
       })
       .catch(() => {
-        // 简单失败提示
         const headBox = document.getElementById(`head-${market.code}`);
-        headBox.textContent = 'ERR';
-        headBox.classList.remove('blank');
+        headBox.textContent = 'ERR'; headBox.classList.remove('blank');
       });
   });
 }
@@ -221,46 +185,22 @@ function startDraw(showImmediateFirst = true, elapsedSec = 0) {
 function showSpecial(code, idx, val) {
   const el = document.getElementById(`special-${code}-${idx}`);
   if (!el) return;
-  el.textContent = val;
-  el.classList.remove('blank');
+  el.textContent = val; el.classList.remove('blank');
 }
 
 function renderHeadAndTypes(code, headFromServer, nums, data) {
   const headBox = document.getElementById(`head-${code}`);
   const oddEven = document.getElementById(`odd-even-${code}`);
   const bigSmall = document.getElementById(`big-small-${code}`);
-  const chosen = (headFromServer !== null)
-    ? headFromServer
-    : (nums.length ? parseInt(nums[Math.floor(Math.random() * nums.length)], 10) : NaN);
-
+  const chosen = (headFromServer !== null) ? headFromServer : (nums.length ? parseInt(nums[Math.floor(Math.random() * nums.length)], 10) : NaN);
   if (!Number.isNaN(chosen)) {
-    headBox.textContent = chosen.toString().padStart(2, '0');
-    headBox.classList.remove('blank');
-
-    oddEven.textContent = (data.parity && (data.parity === '单' || data.parity === '双'))
-      ? data.parity
-      : (chosen % 2 === 0 ? '双' : '单');
-    oddEven.classList.remove('blank');
-
-    bigSmall.textContent = (data.size && (data.size === '大' || data.size === '小'))
-      ? data.size
-      : (chosen >= 50 ? '大' : '小');
-    bigSmall.classList.remove('blank');
-
-    // 若头奖与某个 special 相同，则清空该格，保持唯一
-    for (let j = 0; j < 3; j++) {
-      const s = document.getElementById(`special-${code}-${j}`);
-      if (s && s.textContent === chosen.toString().padStart(2, '0')) {
-        s.textContent = '--';
-        s.classList.add('blank');
-        break;
-      }
-    }
-  } else {
-    headBox.textContent = 'ERR';
-    headBox.classList.remove('blank');
-  }
+    headBox.textContent = chosen.toString().padStart(2, '0'); headBox.classList.remove('blank');
+    oddEven.textContent = (data.parity && (data.parity === '单' || '双')) ? data.parity : (chosen % 2 === 0 ? '双' : '单'); oddEven.classList.remove('blank');
+    bigSmall.textContent = (data.size && (data.size === '大' || '小')) ? data.size : (chosen >= 50 ? '大' : '小'); bigSmall.classList.remove('blank');
+    for (let j = 0; j < 3; j++) { const s = document.getElementById(`special-${code}-${j}`); if (s && s.textContent === chosen.toString().padStart(2, '0')) { s.textContent = '--'; s.classList.add('blank'); break; } }
+  } else { headBox.textContent = 'ERR'; headBox.classList.remove('blank'); }
 }
 </script>
 </body>
 </html>
+
