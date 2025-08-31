@@ -117,6 +117,10 @@ def api_draw():
         }
     return jsonify(resp)
 
+@app.route('/history')
+def history():
+    return render_template('history.html')
+
 # === Page ===
 @app.route('/')
 def index():
