@@ -14,6 +14,12 @@
     .menu.open .menu-list{display:block;}
     .menu-list a{display:block;padding:10px 14px;color:#fff;text-decoration:none}
     .menu-list a:hover{background:#333}
+
+    /* ✅ 新增：logo 样式 */
+    .brand{ display:flex; align-items:center; margin-left:12px; }
+    .brand img{ height:28px; display:block; }
+    @media (min-width:768px){ .brand img{ height:32px; } }
+
     /* 让内容与顶条有间距 */
     .container{margin-top:12px;}
   </style>
@@ -28,6 +34,11 @@
         <li><a href="/history">历史记录</a></li>
       </ul>
     </div>
+
+    <!-- logo，点它返回主页 -->
+    <a class="brand" href="/" aria-label="X33">
+      <img src="{{ url_for('static', filename='x33-logo.png') }}" alt="X33 Logo">
+    </a>
   </div>
 
 <div class="container">
