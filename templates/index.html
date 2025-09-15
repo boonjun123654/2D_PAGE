@@ -271,9 +271,9 @@ function renderHeadAndTypes(code, headFromServer, nums, data){
                 (nums.length?parseInt(nums[Math.floor(Math.random()*nums.length)],10):NaN);
   if(!Number.isNaN(chosen)){
     headBox.textContent=chosen.toString().padStart(2,'0'); headBox.classList.remove('blank');
-    oddEven.textContent=(data.parity && (data.parity==='单' || data.parity==='双')) ? data.parity : (chosen%2===0?'双':'单');
+    oddEven.textContent=(data.parity && (data.parity==='Odd' || data.parity==='Even')) ? data.parity : (chosen%2===0?'Even':'Odd');
     oddEven.classList.remove('blank');
-    bigSmall.textContent=(data.size && (data.size==='大' || data.size==='小')) ? data.size : (chosen>=50?'大':'小');
+    bigSmall.textContent=(data.size && (data.size==='Big' || data.size==='Small')) ? data.size : (chosen>=50?'Big':'Small');
     bigSmall.classList.remove('blank');
     for(let j=0;j<3;j++){ const s=document.getElementById(`special-${code}-${j}`);
       if(s && s.textContent===chosen.toString().padStart(2,'0')){ s.textContent='--'; s.classList.add('blank'); break; }
@@ -285,5 +285,6 @@ function renderHeadAndTypes(code, headFromServer, nums, data){
 </script>
 </body>
 </html>
+
 
 
