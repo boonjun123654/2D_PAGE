@@ -2,7 +2,7 @@ import os
 from flask import Flask, render_template, request, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta
 from pytz import timezone
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -52,14 +52,18 @@ if not scheduler.running:
     scheduler.start()
     print("[scheduler] started")
 
+# ======= 新增：中英映射，接口统一输出英文 =======
+PARITY_MAP = {"单": "Odd", "双": "Even", "Odd": "Odd", "Even": "Even"}
+SIZE_MAP   = {"大": "Big", "小": "Small", "Big": "Big", "Small": "Small"}
+
 @app.route('/draw')
 def api_draw():
     market = request.args.get('market', 'M').strip().upper()
-    force_code = request.args.get('code')           # 可选：指定 code=YYYYMMDD/HHMM
-    strict = request.args.get('strict', '0') == '1' # strict=1 则不回退
+    force_code = request.args.get('code')            # 可选：指定 code=YYYYMMDD/HHMM
+    strict = request.args.get('strict', '0') == '1'  # strict=1 则不回退
     want_debug = request.args.get('debug', '0') == '1'
 
-    code_auto, _ = _current_slot_code()             # 例如 20250830/2050
+    code_auto, _ = _current_slot_code()              # 例如 20250830/2050
     code = force_code.strip() if force_code else code_auto
 
     base_sql = """
@@ -100,20 +104,41 @@ def api_draw():
     head = row.get("head")
     head = head.zfill(2) if head else None
 
+    # 5) 统一英文输出（数据库可继续存中文）
+    parity_val_db = row.get("parity_type")  # 可能是 "单"/"双" 或空
+    size_val_db   = row.get("size_type")    # 可能是 "大"/"小" 或空
+
+    parity_eng = PARITY_MAP.get(parity_val_db) if parity_val_db else None
+    size_eng   = SIZE_MAP.get(size_val_db)   if size_val_db   else None
+
+    # 若库里没写 parity/size，但 head 存在，则用 head 自动计算英文
+    if (parity_eng is None or size_eng is None) and head:
+        try:
+            chosen = int(head)
+            if parity_eng is None:
+                parity_eng = "Even" if chosen % 2 == 0 else "Odd"
+            if size_eng is None:
+                size_eng = "Big" if chosen >= 50 else "Small"
+        except Exception:
+            # head 不是数字就跳过兜底
+            pass
+
     resp = {
         "code": row["code"],
         "market": row["market"],
         "head": head,
         "special": specials,
     }
-    # 单/双、大/小 直接使用现有列（若为空，前端会按 head 计算）
-    if row.get("parity_type") in ("单", "双"): resp["parity"] = row["parity_type"]
-    if row.get("size_type")   in ("大", "小"): resp["size"]   = row["size_type"]
+    if parity_eng:
+        resp["parity"] = parity_eng
+    if size_eng:
+        resp["size"] = size_eng
 
     if want_debug:
         resp["_debug"] = {
             "computed_code": code_auto, "force_code": force_code,
-            "strict": strict, "used_row_id": row["id"]
+            "strict": strict, "used_row_id": row["id"],
+            "db_parity": parity_val_db, "db_size": size_val_db
         }
     return jsonify(resp)
 
