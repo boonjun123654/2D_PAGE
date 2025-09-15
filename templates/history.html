@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>2D 历史记录</title>
+  <title>X33</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <style>
     .topbar{background:#111;color:#fff;height:48px;display:flex;align-items:center;padding:0 12px;}
@@ -128,8 +128,8 @@ function paintRow(code, data){
     const hb=document.getElementById(`head-${code}`); hb.textContent=head; hb.classList.remove('blank');
     const oe=document.getElementById(`odd-even-${code}`);
     const bs=document.getElementById(`big-small-${code}`);
-    oe.textContent=(data.parity && (data.parity==='单' || data.parity==='双')) ? data.parity : ((parseInt(head,10)%2===0)?'双':'单');
-    bs.textContent=(data.size && (data.size==='大' || data.size==='小')) ? data.size : ((parseInt(head,10)>=50)?'大':'小');
+    oe.textContent=(data.parity && (data.parity==='Odd' || data.parity==='Even')) ? data.parity : ((parseInt(head,10)%2===0)?'Even':'Odd');
+    bs.textContent=(data.size && (data.size==='Big' || data.size==='Small')) ? data.size : ((parseInt(head,10)>=50)?'Big':'Small');
     oe.classList.remove('blank'); bs.classList.remove('blank');
   }
 }
