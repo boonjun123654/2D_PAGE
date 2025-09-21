@@ -26,23 +26,23 @@
     <div class="menu" id="mainMenu">
       <button class="menu-btn" aria-label="菜单">☰</button>
       <ul class="menu-list">
-        <li><a href="/">主页</a></li>
-        <li><a href="/history">历史记录</a></li>
+        <li><a href="/">Home</a></li>
+        <li><a href="/history">History</a></li>
       </ul>
     </div>
   </div>
 
 <div class="container">
   <div class="filters">
-    <label>日期：
+    <label>Date：
       <input type="date" id="pickDate">
     </label>
-    <label>时段：
+    <label>Time：
       <select id="pickSlot">
-        <option value="">请选择</option>
+        <option value="">Select</option>
       </select>
     </label>
-    <button id="queryBtn">查询</button>
+    <button id="queryBtn">Search</button>
   </div>
   <div class="market-area" id="draw-area"></div>
 </div>
@@ -59,9 +59,9 @@
 function pad(n){ return n.toString().padStart(2,'0'); }
 
 const markets = [
-  { code: 'MGV 21', name: 'MGV 21',       color: '#ffff00', logo: 'MGV21.png' },
-  { code: 'UCA 68', name: 'UCA 68',      color: '#0000ff', logo: 'UCA68.png' },
-  { code: 'SFC 99', name: 'SFC 99',   color: '#cc0000', logo: 'SFC99.png' }
+  { code: 'MGV 21', name: 'MGV 21',       color: '#052659', logo: 'MGV21.png' },
+  { code: 'UCA 68', name: 'UCA 68',      color: '#05161A', logo: 'UCA68.png' },
+  { code: 'SFC 99', name: 'SFC 99',   color: '#2B124C', logo: 'SFC99.png' }
 ];
 
 function buildBoxes(label){
